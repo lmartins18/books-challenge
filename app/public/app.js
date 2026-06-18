@@ -94,6 +94,7 @@ async function showLogin() {
   const { 0: readers } = [await api("/readers")];
   const pick = $("#reader-pick");
   pick.innerHTML = "";
+  pick.classList.remove("hidden");
   $("#pin-pad").classList.add("hidden");
   for (const r of readers) {
     const b = el(`<button class="btn">${esc(r.name)}${r.hasPin ? "" : " · set PIN"}</button>`);
@@ -166,7 +167,7 @@ async function renderLeaderboard() {
   v.innerHTML = "";
   const head = el(`
     <div class="card">
-      <div class="season-head"><h2>🏆 ${esc(season.name)}</h2>
+      <div class="season-head"><h2>${esc(season.name)}</h2>
         <span class="days">${daysLeft(season.ends_on)} days left</span></div>
     </div>`);
   v.appendChild(head);
@@ -201,7 +202,7 @@ async function renderShelf() {
   const v = $("#view");
   v.innerHTML = `<p class="muted">Loading…</p>`;
   const { books } = await api("/books");
-  v.innerHTML = `<h2>📖 My Books</h2>`;
+  v.innerHTML = `<h2>My Books</h2>`;
   if (!books.length) {
     v.appendChild(el(`<p class="muted">No books yet. Tap <b>Add</b> to start.</p>`));
     return;
@@ -249,12 +250,14 @@ async function bookActions(b) {
 // --- Add (search + scan) ----------------------------------------------------
 function renderAdd() {
   const v = $("#view");
-  v.innerHTML = `<h2>➕ Add a Book</h2>`;
+  v.innerHTML = `<h2>Add a Book</h2>`;
   const bar = el(`
     <div class="card">
       <div class="searchbar">
         <input id="q" placeholder="Search title or author…" autocomplete="off">
-        <button id="scan" class="btn ghost" title="Scan ISBN">📷</button>
+        <button id="scan" class="btn ghost" title="Scan ISBN" aria-label="Scan ISBN">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M7 12h10"/></svg>
+        </button>
       </div>
       <div id="results"></div>
     </div>`);
@@ -390,12 +393,12 @@ async function startScan() {
 // --- Settings ---------------------------------------------------------------
 async function renderSettings() {
   const v = $("#view");
-  v.innerHTML = `<h2>⚙️ Settings</h2><p class="muted">Loading…</p>`;
+  v.innerHTML = `<h2>Settings</h2><p class="muted">Loading…</p>`;
   const [{ genres }, { seasons }] = await Promise.all([
     api("/genre-multipliers"),
     api("/seasons"),
   ]);
-  v.innerHTML = `<h2>⚙️ Settings</h2>`;
+  v.innerHTML = `<h2>Settings</h2>`;
 
   // Difficulty multipliers
   const gcard = el(`<div class="card"><h2>Difficulty multipliers</h2>

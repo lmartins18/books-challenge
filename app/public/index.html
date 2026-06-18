@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#0e0c0b" />
     <title>Book Challenge</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/icons/icon.svg" />
@@ -14,7 +17,7 @@
     <!-- Login -------------------------------------------------------------->
     <section id="login" class="login hidden">
       <div class="login-card">
-        <h1>📚 Book Challenge</h1>
+        <h1 class="grad-text">Book Challenge</h1>
         <p class="muted">Pages, not books. Fair by difficulty.</p>
         <div id="reader-pick" class="reader-pick"></div>
         <div id="pin-pad" class="pin-pad hidden">
@@ -33,17 +36,29 @@
     <!-- App ---------------------------------------------------------------->
     <main id="app" class="hidden">
       <header class="topbar">
-        <span class="brand">📚 Book Challenge</span>
+        <span class="brand grad-text">Book Challenge</span>
         <span class="who"><span id="me-name"></span> · <a id="logout" href="#">log out</a></span>
       </header>
 
       <div id="view" class="view"></div>
 
       <nav class="tabbar">
-        <button class="tab" data-view="leaderboard">🏆<span>Standings</span></button>
-        <button class="tab" data-view="shelf">📖<span>My Books</span></button>
-        <button class="tab" data-view="add">➕<span>Add</span></button>
-        <button class="tab" data-view="settings">⚙️<span>Settings</span></button>
+        <button class="tab" data-view="leaderboard">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v3a6 6 0 0 1-12 0V4Z"/><path d="M6 5H4a2 2 0 0 0 0 4h2"/><path d="M18 5h2a2 2 0 0 1 0 4h-2"/><path d="M9 20h6M12 14v6"/></svg>
+          <span>Standings</span>
+        </button>
+        <button class="tab" data-view="shelf">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5a2 2 0 0 1 2-2h11v16H7a2 2 0 0 0-2 2V5Z"/><path d="M5 19a2 2 0 0 1 2-2h11"/></svg>
+          <span>My Books</span>
+        </button>
+        <button class="tab" data-view="add">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          <span>Add</span>
+        </button>
+        <button class="tab" data-view="settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M19 7h1M4 17h1M11 17h9"/><circle cx="16" cy="7" r="2.4"/><circle cx="8" cy="17" r="2.4"/></svg>
+          <span>Settings</span>
+        </button>
       </nav>
     </main>
 
