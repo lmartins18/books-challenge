@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#1a1410" />
+    <meta name="theme-color" content="#0e0c0b" />
     <title>Book Challenge</title>
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
@@ -52,6 +52,22 @@
       <video id="scan-video" playsinline></video>
       <p class="scan-hint">Point at the barcode on the back of the book</p>
       <button id="scan-close" class="btn ghost">Cancel</button>
+    </div>
+
+    <!-- In-app dialog (replaces native prompt/confirm) -------------------->
+    <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal-scrim"></div>
+      <div class="modal-card" role="document">
+        <h3 id="modal-title"></h3>
+        <p id="modal-msg" class="muted"></p>
+        <div id="modal-field" class="modal-field hidden">
+          <input id="modal-input" autocomplete="off" />
+        </div>
+        <div class="modal-actions">
+          <button id="modal-cancel" class="btn ghost">Cancel</button>
+          <button id="modal-ok" class="btn">OK</button>
+        </div>
+      </div>
     </div>
 
     <div id="toast" class="toast hidden"></div>

@@ -30,6 +30,61 @@ function toast(msg) {
   toastTimer = setTimeout(() => t.classList.add("hidden"), 2600);
 }
 
+// --- In-app dialog (promise-based; replaces native prompt/confirm) ----------
+function dialog({ title, message = "", okText = "OK", cancelText = "Cancel",
+                  danger = false, input = null }) {
+  const modal = $("#modal");
+  const field = $("#modal-field");
+  const inputEl = $("#modal-input");
+  const ok = $("#modal-ok");
+  const cancel = $("#modal-cancel");
+
+  $("#modal-title").textContent = title;
+  const msg = $("#modal-msg");
+  msg.textContent = message;
+  msg.classList.toggle("hidden", !message);
+  ok.textContent = okText;
+  cancel.textContent = cancelText;
+  ok.classList.toggle("danger", !!danger);
+
+  if (input) {
+    field.classList.remove("hidden");
+    inputEl.type = input.type || "text";
+    if (input.inputmode) inputEl.setAttribute("inputmode", input.inputmode);
+    else inputEl.removeAttribute("inputmode");
+    inputEl.placeholder = input.placeholder || "";
+    inputEl.value = input.value ?? "";
+  } else {
+    field.classList.add("hidden");
+  }
+
+  modal.classList.remove("hidden");
+  requestAnimationFrame(() => {
+    modal.classList.add("show");
+    (input ? inputEl : ok).focus();
+    if (input) inputEl.select();
+  });
+
+  return new Promise((resolve) => {
+    const close = (result) => {
+      modal.classList.remove("show");
+      setTimeout(() => modal.classList.add("hidden"), 180);
+      ok.onclick = cancel.onclick = scrim.onclick = inputEl.onkeydown = null;
+      document.removeEventListener("keydown", onEsc, true);
+      resolve(result);
+    };
+    const scrim = modal.querySelector(".modal-scrim");
+    const accept = () => close(input ? inputEl.value : true);
+    ok.onclick = accept;
+    cancel.onclick = scrim.onclick = () => close(input ? null : false);
+    inputEl.onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); accept(); } };
+    const onEsc = (e) => { if (e.key === "Escape") close(input ? null : false); };
+    document.addEventListener("keydown", onEsc, true);
+  });
+}
+const confirmDialog = (opts) => dialog({ okText: "Confirm", ...opts });
+const promptDialog = (opts) => dialog({ input: { type: "text", ...opts.input }, ...opts });
+
 const state = { me: null, view: "leaderboard" };
 
 // --- Login ------------------------------------------------------------------
@@ -70,7 +125,7 @@ function openPinPad(reader) {
     }
   };
   $("#pin-go").onclick = submit;
-  pin.onkeydown = (e) => e.key === "Enter" && submit();
+  pin.onkeydown = (e) => { if (e.key === "Enter") submit(); };
   $("#pin-back").onclick = showLogin;
 }
 
@@ -172,7 +227,12 @@ async function renderShelf() {
 }
 
 async function bookActions(b) {
-  const page = prompt(`"${b.title}" — what page are you on now?${b.page_count ? " (of " + b.page_count + ")" : ""}`, b.current_page);
+  const page = await promptDialog({
+    title: b.title,
+    message: `What page are you on now?${b.page_count ? " (of " + b.page_count + ")" : ""}`,
+    okText: "Save progress",
+    input: { type: "number", inputmode: "numeric", value: b.current_page, placeholder: "Page number" },
+  });
   if (page === null) return;
   const toPage = parseInt(page, 10);
   if (!Number.isInteger(toPage)) return toast("Enter a page number");
@@ -202,7 +262,7 @@ function renderAdd() {
   const q = $("#q");
   let t;
   q.oninput = () => { clearTimeout(t); t = setTimeout(() => runSearch(q.value), 350); };
-  q.onkeydown = (e) => e.key === "Enter" && runSearch(q.value);
+  q.onkeydown = (e) => { if (e.key === "Enter") runSearch(q.value); };
   $("#scan").onclick = startScan;
 }
 
@@ -247,7 +307,12 @@ function addResultCard(box, r) {
 }
 
 async function addBook(r, excluded) {
-  if (excluded && !confirm(`${r.excludeReason}.\nKids' books & comics don't count. Add anyway?`)) return;
+  if (excluded && !(await confirmDialog({
+    title: "Add this book anyway?",
+    message: `${r.excludeReason}. Kids' books & comics don't count toward the challenge.`,
+    okText: "Add anyway",
+    danger: true,
+  }))) return;
   const body = { ...r, difficultyMultiplier: r.suggestedMultiplier, force: excluded };
   try {
     await api("/books", { method: "POST", body });
