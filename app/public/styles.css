@@ -1,4 +1,4 @@
-/* Book Challenge — dark & premium. Near-black glass, indigo/violet glow. */
+/* Book Challenge — dark & premium. Near-black glass, gold glow. */
 :root {
   /* Base — near black with a cool blue cast */
   --bg: #07070d;
@@ -14,20 +14,20 @@
   --ink-soft: #c6c6dd;
   --muted: #8585a3;
 
-  /* Accent — indigo → violet → cyan */
-  --indigo: #6366f1;
-  --violet: #8b5cf6;
-  --cyan: #22d3ee;
-  --accent: #7c74f6;
-  --accent-grad: linear-gradient(135deg, #6366f1 0%, #8b5cf6 55%, #a855f7 100%);
-  --accent-grad-bright: linear-gradient(135deg, #818cf8 0%, #a78bfa 55%, #c084fc 100%);
+  /* Accent — gold */
+  --gold: #e0a43b;
+  --gold-bright: #f3c969;
+  --gold-deep: #b9792a;
+  --accent: #e0a43b;
+  --accent-grad: linear-gradient(135deg, #f3c969 0%, #e0a43b 52%, #c98a2e 100%);
+  --accent-grad-bright: linear-gradient(135deg, #f9dd92 0%, #f0c463 52%, #e0a43b 100%);
   --err: #fb7185;
 
   /* Hairlines & glow */
   --line: rgba(255, 255, 255, 0.08);
   --line-strong: rgba(255, 255, 255, 0.14);
-  --glow: 0 12px 36px -18px rgba(99, 102, 241, 0.4);
-  --glow-strong: 0 16px 44px -18px rgba(124, 116, 246, 0.42);
+  --glow: 0 12px 36px -18px rgba(224, 164, 59, 0.4);
+  --glow-strong: 0 16px 44px -18px rgba(224, 164, 59, 0.42);
   --shadow: 0 18px 50px -26px rgba(0, 0, 0, 0.85);
 
   --radius: 20px;
@@ -42,9 +42,9 @@
 html, body { margin: 0; height: 100%; }
 body {
   background:
-    radial-gradient(900px 600px at 80% -10%, rgba(139, 92, 246, 0.12), transparent 60%),
-    radial-gradient(820px 560px at 10% 6%, rgba(99, 102, 241, 0.09), transparent 58%),
-    radial-gradient(700px 600px at 92% 108%, rgba(34, 211, 238, 0.05), transparent 55%),
+    radial-gradient(900px 600px at 80% -10%, rgba(224, 164, 59, 0.12), transparent 60%),
+    radial-gradient(820px 560px at 10% 6%, rgba(224, 164, 59, 0.09), transparent 58%),
+    radial-gradient(700px 600px at 92% 108%, rgba(201, 138, 46, 0.06), transparent 55%),
     linear-gradient(180deg, var(--bg-2), var(--bg));
   background-attachment: fixed;
   color: var(--ink);
@@ -56,8 +56,8 @@ body {
 .hidden { display: none !important; }
 .muted { color: var(--muted); }
 .err { color: var(--err); min-height: 1.2em; margin: .4rem 0 0; font-size: .9rem; }
-a { color: #a5a0ff; text-decoration: none; }
-a:hover { color: #c4c0ff; }
+a { color: #ecc46b; text-decoration: none; }
+a:hover { color: #f4d88f; }
 
 h1, h2, h3 { font-family: var(--serif); font-weight: 600; letter-spacing: -.005em; line-height: 1.15; }
 
@@ -71,20 +71,20 @@ h1, h2, h3 { font-family: var(--serif); font-weight: 600; letter-spacing: -.005e
 button { font: inherit; cursor: pointer; }
 .btn {
   position: relative; isolation: isolate;
-  background: var(--accent-grad); color: #fff; border: 0; border-radius: var(--radius-sm);
-  padding: .78rem 1.2rem; font-weight: 650; letter-spacing: .1px;
-  box-shadow: 0 8px 20px -12px rgba(124, 116, 246, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  background: var(--accent-grad); color: #2c1d07; border: 0; border-radius: var(--radius-sm);
+  padding: .78rem 1.2rem; font-weight: 700; letter-spacing: .1px;
+  box-shadow: 0 8px 20px -12px rgba(224, 164, 59, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.18);
   transition: transform .08s ease, box-shadow .2s ease, filter .2s ease;
 }
-.btn:hover { filter: brightness(1.06); box-shadow: 0 10px 26px -12px rgba(124, 116, 246, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.22); }
+.btn:hover { filter: brightness(1.06); box-shadow: 0 10px 26px -12px rgba(224, 164, 59, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.22); }
 .btn:active { transform: translateY(1px); }
 .btn.ghost {
-  background: var(--glass-2); color: var(--ink); border: 1px solid var(--line-strong);
+  background: var(--glass-2); color: var(--ink); font-weight: 650; border: 1px solid var(--line-strong);
   box-shadow: none; backdrop-filter: blur(6px);
 }
-.btn.ghost:hover { background: var(--glass-3); border-color: rgba(124, 116, 246, 0.5); filter: none; }
+.btn.ghost:hover { background: var(--glass-3); border-color: rgba(224, 164, 59, 0.5); filter: none; }
 .btn.sm { padding: .46rem .85rem; font-size: .85rem; border-radius: 10px; }
-.btn.danger { background: linear-gradient(135deg, #fb7185, #f43f5e); box-shadow: 0 10px 26px -10px rgba(244, 63, 94, 0.7), inset 0 1px 0 rgba(255,255,255,.22); }
+.btn.danger { background: linear-gradient(135deg, #fb7185, #f43f5e); color: #fff; box-shadow: 0 10px 26px -10px rgba(244, 63, 94, 0.7), inset 0 1px 0 rgba(255,255,255,.22); }
 .row { display: flex; gap: .6rem; margin-top: .9rem; }
 .row .btn { flex: 1; }
 
@@ -97,7 +97,7 @@ input, select {
 input::placeholder { color: var(--muted); }
 input:focus, select:focus {
   outline: none; border-color: var(--accent); background: rgba(0, 0, 0, 0.42);
-  box-shadow: 0 0 0 3px rgba(124, 116, 246, 0.16);
+  box-shadow: 0 0 0 3px rgba(224, 164, 59, 0.16);
 }
 
 /* --- Glass card mixin look ------------------------------------------------*/
@@ -118,8 +118,8 @@ input:focus, select:focus {
   box-shadow: var(--glow-strong), var(--shadow), inset 0 1px 0 rgba(255,255,255,.08);
   animation: rise .45s cubic-bezier(.22,.61,.36,1) both;
 }
-.login-card h1 { margin: 0 0 .3rem; font-size: 2rem; }
-.login-card > .muted { margin: 0; }
+.login-card h1 { margin: 0; font-size: 2rem; }
+.login-card .tagline { margin: 1.1rem 0 0; font-size: .98rem; font-style: italic; }
 .reader-pick { display: grid; gap: .7rem; margin-top: 1.6rem; }
 .reader-pick .btn { padding: 1.05rem; font-size: 1.05rem; }
 .pin-pad { margin-top: 1.1rem; display: grid; gap: .25rem; }
@@ -159,7 +159,7 @@ input:focus, select:focus {
   transition: transform .22s ease;
 }
 .tab:active { transform: scale(.92); }
-.tab.active { color: #b9b4ff; }
+.tab.active { color: #f0c463; }
 .tab.active::before { transform: translateX(-50%) scaleX(1); }
 
 /* --- Cards ----------------------------------------------------------------*/
@@ -172,8 +172,8 @@ h2 { font-size: 1.3rem; margin: .2rem 0 1rem; }
 .season-head { display: flex; justify-content: space-between; align-items: center; gap: .6rem; }
 .season-head h2 { margin: 0; }
 .season-head .days {
-  color: #cbc7ff; font-size: .72rem; font-weight: 700; white-space: nowrap;
-  background: rgba(124, 116, 246, 0.16); border: 1px solid rgba(124, 116, 246, 0.4);
+  color: #f0d18a; font-size: .72rem; font-weight: 700; white-space: nowrap;
+  background: rgba(224, 164, 59, 0.16); border: 1px solid rgba(224, 164, 59, 0.4);
   padding: .3rem .65rem; border-radius: 999px;
 }
 .standing {
@@ -193,7 +193,7 @@ h2 { font-size: 1.3rem; margin: .2rem 0 1rem; }
 
 .bar { height: 8px; background: rgba(255, 255, 255, 0.06); border-radius: 6px; margin-top: .5rem; overflow: hidden; }
 .bar > i { display: block; height: 100%; border-radius: 6px; background: var(--accent-grad-bright); transition: width .55s cubic-bezier(.22,.61,.36,1); }
-.leader .bar > i { background: linear-gradient(90deg, #818cf8, #22d3ee); }
+.leader .bar > i { background: linear-gradient(90deg, #f9dd92, #e0a43b); }
 
 .coverwall { display: flex; flex-wrap: wrap; gap: .55rem; margin-top: .65rem; }
 .coverwall img { width: 48px; height: 72px; object-fit: cover; border-radius: 7px; box-shadow: var(--shadow); transition: transform .18s ease, box-shadow .18s ease; }
@@ -202,12 +202,12 @@ h2 { font-size: 1.3rem; margin: .2rem 0 1rem; }
 /* --- Shelf ----------------------------------------------------------------*/
 .shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem; }
 .book { border-radius: 16px; overflow: hidden; cursor: pointer; transition: transform .16s ease, box-shadow .2s ease, border-color .2s ease; }
-.book:hover { transform: translateY(-5px); box-shadow: var(--glow), var(--shadow); border-color: rgba(124, 116, 246, 0.45); }
+.book:hover { transform: translateY(-5px); box-shadow: var(--glow), var(--shadow); border-color: rgba(224, 164, 59, 0.45); }
 .book .cover { width: 100%; aspect-ratio: 2/3; object-fit: cover; background: var(--glass-2); display: block; }
 .book .meta { padding: .65rem .7rem .8rem; }
 .book .t { font-size: .88rem; font-weight: 700; line-height: 1.3; }
 .book .a { font-size: .73rem; color: var(--muted); margin: .12rem 0 .5rem; }
-.book .tag { font-size: .68rem; color: #b9b4ff; font-weight: 650; }
+.book .tag { font-size: .68rem; color: #f0c463; font-weight: 650; }
 .book.finished { opacity: .6; }
 .book .bar { margin: .5rem 0 .1rem; }
 

@@ -1,6 +1,6 @@
 // Service worker: cache-first for the app shell, network-first for /api/* so
 // data stays fresh while the shell still loads offline.
-const SHELL = "bc-shell-v4";
+const SHELL = "bc-shell-v5";
 const ASSETS = [
   "/",
   "/index.html",
