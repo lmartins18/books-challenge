@@ -1,0 +1,12 @@
+# Local development override. Publishes port 3000 and (by omitting the `prod`
+# profile) keeps the Cloudflare tunnel from starting.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+#
+# App: http://localhost:3000
+services:
+  app:
+    environment:
+      NODE_ENV: "development"
+    ports:
+      - "3000:3000"

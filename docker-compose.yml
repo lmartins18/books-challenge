@@ -1,0 +1,54 @@
+# Production stack: the Node app + a Cloudflare Tunnel. Nothing is published to
+# the host — cloudflared reaches the app over the internal Docker network and
+# Cloudflare terminates TLS at the edge. Auth is the in-app PIN, so no
+# Cloudflare Access policy is required (add one if you want a second gate).
+#
+# Local development: layer the dev override, which publishes port 3000 and
+# skips the tunnel:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+#
+# Production (CI does this): images are prebuilt via buildx, then
+#   docker compose --profile prod up -d --no-build
+services:
+  app:
+    build: ./app
+    image: book-challenge-app:latest
+    container_name: book-challenge-app
+    restart: unless-stopped
+    security_opt:
+      - apparmor:unconfined
+    environment:
+      NODE_ENV: "production"
+      PORT: "3000"
+      DATA_DIR: "/data"
+      SESSION_SECRET: "${SESSION_SECRET:-dev-insecure-secret-change-me}"
+      # Optional — raises Google Books quota. Works without it.
+      GOOGLE_BOOKS_API_KEY: "${GOOGLE_BOOKS_API_KEY:-}"
+    volumes:
+      - app-data:/data
+    networks:
+      - internal
+
+  # Public ingress. Only runs under the `prod` profile so a local `docker
+  # compose up` doesn't try to start a tunnel. Point the tunnel's public
+  # hostname (books.lmartins18.com) at http://app:3000 in the Cloudflare dash.
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: book-challenge-cloudflared
+    restart: unless-stopped
+    profiles: ["prod"]
+    security_opt:
+      - apparmor:unconfined
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CF_TUNNEL_TOKEN:-}
+    depends_on:
+      - app
+    networks:
+      - internal
+
+networks:
+  internal:
+
+volumes:
+  app-data:

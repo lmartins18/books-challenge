@@ -1,0 +1,60 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    # Run the cloudflared (prod) profile for every compose command in this job.
+    env:
+      COMPOSE_PROFILES: prod
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Compose env from secrets ─────────────────────────────────────────
+      - name: Write .env
+        run: |
+          cat > .env << EOF
+          SESSION_SECRET=${{ secrets.SESSION_SECRET }}
+          GOOGLE_BOOKS_API_KEY=${{ secrets.GOOGLE_BOOKS_API_KEY }}
+          CF_TUNNEL_TOKEN=${{ secrets.CF_TUNNEL_TOKEN }}
+          EOF
+
+      # ── Build image ──────────────────────────────────────────────────────
+      # The runner host's AppArmor LSM is broken for build containers, so
+      # `docker compose build` fails. Build via buildx with apparmor explicitly
+      # unconfined and --load the image, then bring the stack up --no-build.
+      - name: Build app image
+        run: |
+          docker buildx build --security-opt apparmor=unconfined --load \
+            -t book-challenge-app:latest ./app
+
+      # ── Bring the stack up ───────────────────────────────────────────────
+      - name: Deploy
+        run: docker compose up -d --no-build
+
+      # ── Smoke tests ──────────────────────────────────────────────────────
+      - name: Smoke test — containers running
+        run: |
+          for svc in app cloudflared; do
+            test -n "$(docker compose ps --status running -q "$svc")" \
+              || { echo "::error::$svc not running"; docker compose logs --tail=80 "$svc"; exit 1; }
+          done
+
+      - name: Smoke test — app returns 200
+        run: |
+          for i in $(seq 1 12); do
+            if docker exec book-challenge-app node -e "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.status===200?0:1)).catch(()=>process.exit(1))"; then
+              echo "app OK"; exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::app did not return 200 on /api/health"
+          docker compose logs --tail=100 app
+          exit 1
+
+      - name: Prune dangling images
+        run: docker image prune -f

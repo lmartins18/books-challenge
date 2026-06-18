@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#1a1410" />
+    <title>Book Challenge</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icons/icon.svg" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <!-- Login -------------------------------------------------------------->
+    <section id="login" class="login hidden">
+      <div class="login-card">
+        <h1>📚 Book Challenge</h1>
+        <p class="muted">Pages, not books. Fair by difficulty.</p>
+        <div id="reader-pick" class="reader-pick"></div>
+        <div id="pin-pad" class="pin-pad hidden">
+          <p id="pin-prompt"></p>
+          <input id="pin" type="password" inputmode="numeric" maxlength="8"
+                 autocomplete="off" placeholder="PIN (4–8 digits)" />
+          <div class="row">
+            <button id="pin-back" class="btn ghost">Back</button>
+            <button id="pin-go" class="btn">Enter</button>
+          </div>
+          <p id="login-err" class="err"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- App ---------------------------------------------------------------->
+    <main id="app" class="hidden">
+      <header class="topbar">
+        <span class="brand">📚 Book Challenge</span>
+        <span class="who"><span id="me-name"></span> · <a id="logout" href="#">log out</a></span>
+      </header>
+
+      <div id="view" class="view"></div>
+
+      <nav class="tabbar">
+        <button class="tab" data-view="leaderboard">🏆<span>Standings</span></button>
+        <button class="tab" data-view="shelf">📖<span>My Books</span></button>
+        <button class="tab" data-view="add">➕<span>Add</span></button>
+        <button class="tab" data-view="settings">⚙️<span>Settings</span></button>
+      </nav>
+    </main>
+
+    <!-- Barcode scanner overlay ------------------------------------------->
+    <div id="scanner" class="scanner hidden">
+      <video id="scan-video" playsinline></video>
+      <p class="scan-hint">Point at the barcode on the back of the book</p>
+      <button id="scan-close" class="btn ghost">Cancel</button>
+    </div>
+
+    <div id="toast" class="toast hidden"></div>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

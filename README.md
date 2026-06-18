@@ -83,7 +83,7 @@ docker-compose.dev.yml      # publishes 3000, skips the tunnel
 .env.example                # SESSION_SECRET, GOOGLE_BOOKS_API_KEY?, CF_TUNNEL_TOKEN
 .github/workflows/deploy.yml
 app/
-  Dockerfile                # node:20-alpine + build toolchain for better-sqlite3
+  Dockerfile                # node:24-alpine (built-in node:sqlite, no native build)
   server.js                 # express: auth, /api/*, scoring
   db.js                     # sqlite schema, seed, difficulty + exclusion logic
   metadata.js               # Open Library + Google Books, merged & normalized

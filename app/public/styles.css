@@ -1,0 +1,138 @@
+/* Book Challenge — mobile-first, warm "library" dark theme. No frameworks. */
+:root {
+  --bg: #1a1410;
+  --panel: #241c16;
+  --panel-2: #2e251d;
+  --ink: #f3e9dc;
+  --muted: #b3a392;
+  --accent: #d98c3f;
+  --accent-2: #6fae7e;
+  --line: #3a2e24;
+  --err: #e0746a;
+  --radius: 14px;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.hidden { display: none !important; }
+.muted { color: var(--muted); }
+.err { color: var(--err); min-height: 1.2em; margin: .4rem 0 0; }
+a { color: var(--accent); }
+
+button { font: inherit; cursor: pointer; }
+.btn {
+  background: var(--accent); color: #1a1207; border: 0; border-radius: 10px;
+  padding: .7rem 1.1rem; font-weight: 600;
+}
+.btn:active { transform: translateY(1px); }
+.btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+.btn.sm { padding: .4rem .7rem; font-size: .85rem; }
+.row { display: flex; gap: .6rem; margin-top: .8rem; }
+.row .btn { flex: 1; }
+input, select {
+  width: 100%; padding: .7rem .8rem; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--panel-2); color: var(--ink); font: inherit;
+}
+
+/* --- Login ---------------------------------------------------------------*/
+.login { position: fixed; inset: 0; display: grid; place-items: center; padding: 1.5rem; }
+.login-card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 1.6rem; width: 100%; max-width: 380px; text-align: center;
+}
+.login-card h1 { margin: 0 0 .2rem; }
+.reader-pick { display: grid; gap: .7rem; margin-top: 1.2rem; }
+.reader-pick .btn { padding: 1rem; font-size: 1.1rem; }
+.pin-pad { margin-top: 1rem; }
+
+/* --- Shell ---------------------------------------------------------------*/
+.topbar {
+  position: sticky; top: 0; z-index: 5; display: flex; justify-content: space-between;
+  align-items: center; padding: .8rem 1rem; background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+.brand { font-weight: 700; }
+.who { font-size: .85rem; color: var(--muted); }
+.view { padding: 1rem 1rem 6rem; max-width: 720px; margin: 0 auto; }
+
+.tabbar {
+  position: fixed; bottom: 0; left: 0; right: 0; display: grid; grid-template-columns: repeat(4, 1fr);
+  background: var(--panel); border-top: 1px solid var(--line);
+  padding-bottom: var(--safe-b);
+}
+.tab {
+  background: none; border: 0; color: var(--muted); padding: .55rem 0 .7rem;
+  display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 1.3rem;
+}
+.tab span { font-size: .68rem; }
+.tab.active { color: var(--accent); }
+
+/* --- Cards / sections ----------------------------------------------------*/
+h2 { font-size: 1.15rem; margin: .3rem 0 1rem; }
+.card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 1rem; margin-bottom: 1rem;
+}
+
+/* --- Leaderboard ---------------------------------------------------------*/
+.season-head { display: flex; justify-content: space-between; align-items: baseline; }
+.season-head .days { color: var(--muted); font-size: .85rem; }
+.standing {
+  display: grid; grid-template-columns: 1.6rem 1fr auto; gap: .6rem; align-items: center;
+  padding: .7rem 0; border-bottom: 1px solid var(--line);
+}
+.standing:last-child { border-bottom: 0; }
+.standing .rank { font-weight: 700; color: var(--accent); }
+.standing .name { font-weight: 600; }
+.standing .sub { font-size: .78rem; color: var(--muted); }
+.standing .score { font-size: 1.3rem; font-weight: 700; text-align: right; }
+.bar { height: 6px; background: var(--panel-2); border-radius: 4px; margin-top: .35rem; overflow: hidden; }
+.bar > i { display: block; height: 100%; background: var(--accent); }
+.leader .bar > i { background: var(--accent-2); }
+.coverwall { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .4rem; }
+.coverwall img { width: 44px; height: 66px; object-fit: cover; border-radius: 4px; }
+
+/* --- Shelf ---------------------------------------------------------------*/
+.shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .9rem; }
+.book { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.book .cover { width: 100%; aspect-ratio: 2/3; object-fit: cover; background: var(--panel-2); display: block; }
+.book .meta { padding: .55rem .6rem .7rem; }
+.book .t { font-size: .85rem; font-weight: 600; line-height: 1.25; }
+.book .a { font-size: .72rem; color: var(--muted); margin: .1rem 0 .4rem; }
+.book .tag { font-size: .68rem; color: var(--accent); }
+.book.finished { opacity: .72; }
+.book .bar { margin: .4rem 0; }
+
+/* --- Add / search results ------------------------------------------------*/
+.searchbar { display: flex; gap: .5rem; }
+.searchbar input { flex: 1; }
+.result { display: flex; gap: .7rem; padding: .7rem 0; border-bottom: 1px solid var(--line); }
+.result img { width: 48px; height: 72px; object-fit: cover; border-radius: 4px; background: var(--panel-2); }
+.result .info { flex: 1; min-width: 0; }
+.result .t { font-weight: 600; font-size: .92rem; }
+.result .a { color: var(--muted); font-size: .8rem; }
+.result .badges { margin-top: .3rem; display: flex; gap: .4rem; flex-wrap: wrap; font-size: .72rem; }
+.badge { background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: .1rem .5rem; }
+.badge.warn { color: var(--err); border-color: var(--err); }
+
+/* --- Settings ------------------------------------------------------------*/
+.genre-row { display: grid; grid-template-columns: 1fr 5rem; gap: .6rem; align-items: center; margin-bottom: .6rem; }
+.genre-row input { text-align: center; }
+
+/* --- Scanner -------------------------------------------------------------*/
+.scanner { position: fixed; inset: 0; background: #000; z-index: 20; display: grid; place-items: center; gap: 1rem; padding: 1rem; }
+.scanner video { width: 100%; max-width: 520px; border-radius: 12px; }
+.scan-hint { color: #fff; }
+
+/* --- Toast ---------------------------------------------------------------*/
+.toast {
+  position: fixed; left: 50%; bottom: calc(5rem + var(--safe-b)); transform: translateX(-50%);
+  background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);
+  padding: .7rem 1rem; border-radius: 10px; z-index: 30; max-width: 90%;
+}

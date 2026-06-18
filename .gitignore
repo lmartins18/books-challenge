@@ -1,0 +1,24 @@
+# secrets / env
+.env
+.env.*
+!.env.example
+
+# dependencies
+node_modules/
+
+# local sqlite database
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.log
+*.swp
+.vscode/
+.idea/
+
+# Claude Code local settings
+.claude/

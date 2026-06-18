@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Maskable: keep content within the central ~80% safe zone. -->
+  <rect width="512" height="512" fill="#1a1410"/>
+  <g transform="translate(160 168)">
+    <rect x="0" y="6" width="86" height="196" rx="8" fill="#d98c3f"/>
+    <rect x="12" y="22" width="62" height="10" rx="5" fill="#1a1410" opacity="0.5"/>
+    <rect x="102" y="6" width="86" height="196" rx="8" fill="#6fae7e"/>
+    <rect x="114" y="22" width="62" height="10" rx="5" fill="#1a1410" opacity="0.5"/>
+  </g>
+</svg>
