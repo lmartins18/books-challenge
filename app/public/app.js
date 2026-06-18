@@ -300,7 +300,7 @@ function addResultCard(box, r) {
         <div class="badges">
           <span class="badge">${r.pageCount ? r.pageCount + " p" : "pages ?"}</span>
           <span class="badge">×${r.suggestedMultiplier}</span>
-          ${excluded ? `<span class="badge warn">excluded</span>` : ""}
+          ${excluded ? `<span class="badge warn">flagged</span>` : ""}
         </div>
       </div>
       <button class="btn sm">Add</button>
@@ -311,10 +311,9 @@ function addResultCard(box, r) {
 
 async function addBook(r, excluded) {
   if (excluded && !(await confirmDialog({
-    title: "Add this book anyway?",
-    message: `${r.excludeReason}. Kids' books & comics don't count toward the challenge.`,
-    okText: "Add anyway",
-    danger: true,
+    title: "Add this book?",
+    message: `${r.excludeReason}. It still earns points — we just flag these in case it was added by mistake.`,
+    okText: "Add it",
   }))) return;
   const body = { ...r, difficultyMultiplier: r.suggestedMultiplier, force: excluded };
   try {
@@ -323,7 +322,7 @@ async function addBook(r, excluded) {
     navigate("shelf");
   } catch (e) {
     if (e.message === "already_on_shelf") toast("Already on your shelf");
-    else if (e.message === "excluded") toast("Excluded — kids/comic");
+    else if (e.message === "excluded") toast("Flagged — confirm to add");
     else toast("Could not add book");
   }
 }
