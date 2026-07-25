@@ -101,6 +101,7 @@ for (const name of ["Luis", "Eliana"]) seedReader.run(name);
 // Ordered hardest -> easiest. matchMultiplier() picks the hardest match so a
 // "Philosophy / Fiction" book still reads as philosophy.
 const GENRE_SEED = [
+  ["language", "Different language (non-native)", 2.0],
   ["philosophy", "Philosophy / Religion", 1.5],
   ["science", "Science / Math / Tech", 1.4],
   ["history", "History / Politics", 1.3],

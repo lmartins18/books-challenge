@@ -30,6 +30,61 @@ function toast(msg) {
   toastTimer = setTimeout(() => t.classList.add("hidden"), 2600);
 }
 
+// --- In-app dialog (promise-based; replaces native prompt/confirm) ----------
+function dialog({ title, message = "", okText = "OK", cancelText = "Cancel",
+                  danger = false, input = null }) {
+  const modal = $("#modal");
+  const field = $("#modal-field");
+  const inputEl = $("#modal-input");
+  const ok = $("#modal-ok");
+  const cancel = $("#modal-cancel");
+
+  $("#modal-title").textContent = title;
+  const msg = $("#modal-msg");
+  msg.textContent = message;
+  msg.classList.toggle("hidden", !message);
+  ok.textContent = okText;
+  cancel.textContent = cancelText;
+  ok.classList.toggle("danger", !!danger);
+
+  if (input) {
+    field.classList.remove("hidden");
+    inputEl.type = input.type || "text";
+    if (input.inputmode) inputEl.setAttribute("inputmode", input.inputmode);
+    else inputEl.removeAttribute("inputmode");
+    inputEl.placeholder = input.placeholder || "";
+    inputEl.value = input.value ?? "";
+  } else {
+    field.classList.add("hidden");
+  }
+
+  modal.classList.remove("hidden");
+  requestAnimationFrame(() => {
+    modal.classList.add("show");
+    (input ? inputEl : ok).focus();
+    if (input) inputEl.select();
+  });
+
+  return new Promise((resolve) => {
+    const close = (result) => {
+      modal.classList.remove("show");
+      setTimeout(() => modal.classList.add("hidden"), 180);
+      ok.onclick = cancel.onclick = scrim.onclick = inputEl.onkeydown = null;
+      document.removeEventListener("keydown", onEsc, true);
+      resolve(result);
+    };
+    const scrim = modal.querySelector(".modal-scrim");
+    const accept = () => close(input ? inputEl.value : true);
+    ok.onclick = accept;
+    cancel.onclick = scrim.onclick = () => close(input ? null : false);
+    inputEl.onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); accept(); } };
+    const onEsc = (e) => { if (e.key === "Escape") close(input ? null : false); };
+    document.addEventListener("keydown", onEsc, true);
+  });
+}
+const confirmDialog = (opts) => dialog({ okText: "Confirm", ...opts });
+const promptDialog = (opts) => dialog({ input: { type: "text", ...opts.input }, ...opts });
+
 const state = { me: null, view: "leaderboard" };
 
 // --- Login ------------------------------------------------------------------
@@ -39,6 +94,7 @@ async function showLogin() {
   const { 0: readers } = [await api("/readers")];
   const pick = $("#reader-pick");
   pick.innerHTML = "";
+  pick.classList.remove("hidden");
   $("#pin-pad").classList.add("hidden");
   for (const r of readers) {
     const b = el(`<button class="btn">${esc(r.name)}${r.hasPin ? "" : " · set PIN"}</button>`);
@@ -70,7 +126,7 @@ function openPinPad(reader) {
     }
   };
   $("#pin-go").onclick = submit;
-  pin.onkeydown = (e) => e.key === "Enter" && submit();
+  pin.onkeydown = (e) => { if (e.key === "Enter") submit(); };
   $("#pin-back").onclick = showLogin;
 }
 
@@ -95,7 +151,13 @@ document.querySelectorAll(".tab").forEach((tab) => {
 function navigate(view) {
   state.view = view;
   document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.dataset.view === view));
-  ({ leaderboard: renderLeaderboard, shelf: renderShelf, add: renderAdd, settings: renderSettings }[view])();
+  ({
+    leaderboard: renderLeaderboard,
+    shelf: renderShelf,
+    add: renderAdd,
+    settings: renderSettings,
+    profile: () => renderProfile(state.profileId),
+  }[view])();
 }
 
 // --- Leaderboard ------------------------------------------------------------
@@ -111,7 +173,7 @@ async function renderLeaderboard() {
   v.innerHTML = "";
   const head = el(`
     <div class="card">
-      <div class="season-head"><h2>🏆 ${esc(season.name)}</h2>
+      <div class="season-head"><h2>${esc(season.name)}</h2>
         <span class="days">${daysLeft(season.ends_on)} days left</span></div>
     </div>`);
   v.appendChild(head);
@@ -120,7 +182,7 @@ async function renderLeaderboard() {
   standings.forEach((s, i) => {
     const leader = i === 0 && s.score > 0;
     const row = el(`
-      <div class="standing ${leader ? "leader" : ""}">
+      <div class="standing clickable ${leader ? "leader" : ""}">
         <div class="rank">${i + 1}</div>
         <div>
           <div class="name">${esc(s.name)}</div>
@@ -128,7 +190,9 @@ async function renderLeaderboard() {
           <div class="bar"><i style="width:${(s.score / max) * 100}%"></i></div>
         </div>
         <div class="score">${s.score}</div>
+        <div class="chev">›</div>
       </div>`);
+    row.onclick = () => { state.profileId = s.id; navigate("profile"); };
     board.appendChild(row);
   });
   v.appendChild(board);
@@ -141,12 +205,136 @@ async function renderLeaderboard() {
   }
 }
 
+// --- Reader profile ---------------------------------------------------------
+const ymd = (d) => d.toISOString().slice(0, 10);
+const niceDate = (s) =>
+  s ? new Date(s).toLocaleDateString("en", { month: "short", day: "numeric", year: "numeric" }) : "";
+
+function readingStreaks(activity) {
+  const set = new Set(activity.map((a) => a.date));
+  const DAY = 86400000;
+  let cur = new Date(ymd(new Date()) + "T00:00:00Z");
+  // A streak counts up to today, or yesterday if today has no activity yet.
+  if (!set.has(ymd(cur))) cur = new Date(cur - DAY);
+  let current = 0;
+  while (set.has(ymd(cur))) { current++; cur = new Date(cur - DAY); }
+  let longest = 0, run = 0, prev = null;
+  for (const ds of [...set].sort()) {
+    run = prev && new Date(ds + "T00:00:00Z") - new Date(prev + "T00:00:00Z") === DAY ? run + 1 : 1;
+    longest = Math.max(longest, run);
+    prev = ds;
+  }
+  return { current, longest, activeDays: set.size };
+}
+
+function heatmap(activity) {
+  const map = new Map(activity.map((a) => [a.date, a.pages]));
+  const card = el(`<div class="card">
+    <div class="hm-head"><h2>Reading activity</h2>
+      <span class="hm-legend muted">Less
+        <i data-lvl="0"></i><i data-lvl="1"></i><i data-lvl="2"></i><i data-lvl="3"></i><i data-lvl="4"></i>
+        More</span></div>
+    <div class="hm-scroll"><div class="heatmap"></div></div>
+    <p class="hm-sub muted"></p></div>`);
+  const grid = card.querySelector(".heatmap");
+
+  const WEEKS = 53;
+  const end = new Date(ymd(new Date()) + "T00:00:00Z");
+  const start = new Date(end);
+  start.setUTCDate(start.getUTCDate() - (WEEKS * 7 - 1));
+  start.setUTCDate(start.getUTCDate() - start.getUTCDay()); // align to Sunday
+
+  for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
+    const ds = ymd(d);
+    const pages = map.get(ds) || 0;
+    const lvl = pages === 0 ? 0 : pages <= 15 ? 1 : pages <= 40 ? 2 : pages <= 80 ? 3 : 4;
+    grid.appendChild(el(`<i class="hm-cell" data-lvl="${lvl}" title="${pages} pages · ${ds}"></i>`));
+  }
+  const s = readingStreaks(activity);
+  card.querySelector(".hm-sub").textContent =
+    `${s.activeDays} active days · current streak ${s.current} · longest ${s.longest}`;
+  return card;
+}
+
+function profileBookRow(b, tagHtml) {
+  const pct = b.page_count ? Math.min(100, Math.round((b.current_page / b.page_count) * 100)) : 0;
+  return el(`<div class="p-book">
+    <img class="p-cover" loading="lazy" src="${esc(b.cover_url || "/icons/icon.svg")}" alt="">
+    <div class="p-meta">
+      <div class="t">${esc(b.title)}</div>
+      <div class="a">${esc(b.author || "")}</div>
+      <div class="tag">${tagHtml}</div>
+      ${b.status !== "finished" && "current_page" in b
+        ? `<div class="bar"><i style="width:${pct}%"></i></div>` : ""}
+    </div></div>`);
+}
+
+async function renderProfile(readerId) {
+  const v = $("#view");
+  v.innerHTML = `<p class="muted">Loading…</p>`;
+  let data;
+  try {
+    data = await api(`/readers/${readerId}/profile`);
+  } catch {
+    v.innerHTML = `<p class="err">Could not load profile.</p>`;
+    return;
+  }
+  const { reader, totals, reading, finished, activity } = data;
+  v.innerHTML = "";
+
+  const back = el(`<button class="btn ghost sm profile-back">‹ Standings</button>`);
+  back.onclick = () => navigate("leaderboard");
+  v.appendChild(back);
+  v.appendChild(el(`<h2 class="profile-name">${esc(reader.name)}</h2>`));
+
+  v.appendChild(el(`<div class="card stat-grid">
+    <div class="stat"><div class="stat-n">${totals.pages.toLocaleString()}</div><div class="stat-l">pages</div></div>
+    <div class="stat"><div class="stat-n">${totals.score}</div><div class="stat-l">score</div></div>
+    <div class="stat"><div class="stat-n">${totals.booksFinished}</div><div class="stat-l">finished</div></div>
+    <div class="stat"><div class="stat-n">${totals.reading}</div><div class="stat-l">reading</div></div>
+  </div>`));
+
+  v.appendChild(heatmap(activity));
+
+  if (reading.length) {
+    const card = el(`<div class="card"><h2>Currently reading</h2></div>`);
+    reading.forEach((b) =>
+      card.appendChild(profileBookRow(
+        { ...b, status: "reading" },
+        `${b.current_page}${b.page_count ? "/" + b.page_count : ""} p · ×${b.difficulty_multiplier}`
+      )));
+    v.appendChild(card);
+  }
+
+  if (finished.length) {
+    const byYear = {};
+    for (const b of finished) {
+      const y = (b.finished_at || "").slice(0, 4) || "Undated";
+      (byYear[y] ||= []).push(b);
+    }
+    const card = el(`<div class="card"><h2>Finished</h2></div>`);
+    for (const y of Object.keys(byYear).sort().reverse()) {
+      card.appendChild(el(`<div class="year-head"><span>${y}</span><span class="muted">${byYear[y].length} book${byYear[y].length > 1 ? "s" : ""}</span></div>`));
+      byYear[y].forEach((b) =>
+        card.appendChild(profileBookRow(
+          { ...b, status: "finished" },
+          `finished ${niceDate(b.finished_at)}${b.page_count ? " · " + b.page_count + " p" : ""}`
+        )));
+    }
+    v.appendChild(card);
+  }
+
+  if (!reading.length && !finished.length && !activity.length) {
+    v.appendChild(el(`<p class="muted">No reading logged yet.</p>`));
+  }
+}
+
 // --- Shelf ------------------------------------------------------------------
 async function renderShelf() {
   const v = $("#view");
   v.innerHTML = `<p class="muted">Loading…</p>`;
   const { books } = await api("/books");
-  v.innerHTML = `<h2>📖 My Books</h2>`;
+  v.innerHTML = `<h2>My Books</h2>`;
   if (!books.length) {
     v.appendChild(el(`<p class="muted">No books yet. Tap <b>Add</b> to start.</p>`));
     return;
@@ -172,7 +360,12 @@ async function renderShelf() {
 }
 
 async function bookActions(b) {
-  const page = prompt(`"${b.title}" — what page are you on now?${b.page_count ? " (of " + b.page_count + ")" : ""}`, b.current_page);
+  const page = await promptDialog({
+    title: b.title,
+    message: `What page are you on now?${b.page_count ? " (of " + b.page_count + ")" : ""}`,
+    okText: "Save progress",
+    input: { type: "number", inputmode: "numeric", value: b.current_page, placeholder: "Page number" },
+  });
   if (page === null) return;
   const toPage = parseInt(page, 10);
   if (!Number.isInteger(toPage)) return toast("Enter a page number");
@@ -189,12 +382,14 @@ async function bookActions(b) {
 // --- Add (search + scan) ----------------------------------------------------
 function renderAdd() {
   const v = $("#view");
-  v.innerHTML = `<h2>➕ Add a Book</h2>`;
+  v.innerHTML = `<h2>Add a Book</h2>`;
   const bar = el(`
     <div class="card">
       <div class="searchbar">
         <input id="q" placeholder="Search title or author…" autocomplete="off">
-        <button id="scan" class="btn ghost" title="Scan ISBN">📷</button>
+        <button id="scan" class="btn ghost" title="Scan ISBN" aria-label="Scan ISBN">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M7 12h10"/></svg>
+        </button>
       </div>
       <div id="results"></div>
     </div>`);
@@ -202,7 +397,7 @@ function renderAdd() {
   const q = $("#q");
   let t;
   q.oninput = () => { clearTimeout(t); t = setTimeout(() => runSearch(q.value), 350); };
-  q.onkeydown = (e) => e.key === "Enter" && runSearch(q.value);
+  q.onkeydown = (e) => { if (e.key === "Enter") runSearch(q.value); };
   $("#scan").onclick = startScan;
 }
 
@@ -236,26 +431,37 @@ function addResultCard(box, r) {
         <div class="a">${esc(r.author || "Unknown author")}</div>
         <div class="badges">
           <span class="badge">${r.pageCount ? r.pageCount + " p" : "pages ?"}</span>
-          <span class="badge">×${r.suggestedMultiplier}</span>
-          ${excluded ? `<span class="badge warn">excluded</span>` : ""}
+          <span class="badge mult">×${r.suggestedMultiplier}</span>
+          ${excluded ? `<span class="badge warn">flagged</span>` : ""}
         </div>
+        <label class="lang-toggle"><input type="checkbox"> Reading in a non-native language (×2)</label>
       </div>
       <button class="btn sm">Add</button>
     </div>`);
-  card.querySelector("button").onclick = () => addBook(r, excluded);
+  const langCb = card.querySelector(".lang-toggle input");
+  const multBadge = card.querySelector(".badge.mult");
+  langCb.onchange = () => {
+    multBadge.textContent = langCb.checked ? "×2 language" : `×${r.suggestedMultiplier}`;
+    multBadge.classList.toggle("lang", langCb.checked);
+  };
+  card.querySelector("button").onclick = () => addBook(r, excluded, langCb.checked);
   box.appendChild(card);
 }
 
-async function addBook(r, excluded) {
-  if (excluded && !confirm(`${r.excludeReason}.\nKids' books & comics don't count. Add anyway?`)) return;
-  const body = { ...r, difficultyMultiplier: r.suggestedMultiplier, force: excluded };
+async function addBook(r, excluded, language = false) {
+  if (excluded && !(await confirmDialog({
+    title: "Add this book?",
+    message: `${r.excludeReason}. It still earns points — we just flag these in case it was added by mistake.`,
+    okText: "Add it",
+  }))) return;
+  const body = { ...r, difficultyMultiplier: r.suggestedMultiplier, force: excluded, language };
   try {
     await api("/books", { method: "POST", body });
     toast(`Added "${r.title}"`);
     navigate("shelf");
   } catch (e) {
     if (e.message === "already_on_shelf") toast("Already on your shelf");
-    else if (e.message === "excluded") toast("Excluded — kids/comic");
+    else if (e.message === "excluded") toast("Flagged — confirm to add");
     else toast("Could not add book");
   }
 }
@@ -325,12 +531,12 @@ async function startScan() {
 // --- Settings ---------------------------------------------------------------
 async function renderSettings() {
   const v = $("#view");
-  v.innerHTML = `<h2>⚙️ Settings</h2><p class="muted">Loading…</p>`;
+  v.innerHTML = `<h2>Settings</h2><p class="muted">Loading…</p>`;
   const [{ genres }, { seasons }] = await Promise.all([
     api("/genre-multipliers"),
     api("/seasons"),
   ]);
-  v.innerHTML = `<h2>⚙️ Settings</h2>`;
+  v.innerHTML = `<h2>Settings</h2>`;
 
   // Difficulty multipliers
   const gcard = el(`<div class="card"><h2>Difficulty multipliers</h2>

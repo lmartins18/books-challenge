@@ -225,6 +225,68 @@ app.get("/api/leaderboard", (req, res) => {
   res.json({ season, standings, covers });
 });
 
+// --- Reader profile ---------------------------------------------------------
+// A reader's shelf + finished history + all-time daily reading activity (for a
+// GitHub-style heatmap). Any logged-in reader can view any reader's profile.
+app.get("/api/readers/:id/profile", (req, res) => {
+  const reader = db.prepare("SELECT id, name FROM readers WHERE id=?").get(req.params.id);
+  if (!reader) return res.status(404).json({ error: "not_found" });
+
+  const reading = db
+    .prepare(
+      `SELECT rb.id, rb.current_page, rb.difficulty_multiplier, rb.started_at,
+              b.title, b.author, b.cover_url, b.page_count
+       FROM reader_books rb JOIN books b ON b.id = rb.book_id
+       WHERE rb.reader_id = ? AND rb.status = 'reading'
+       ORDER BY rb.started_at DESC`
+    )
+    .all(reader.id);
+
+  const finished = db
+    .prepare(
+      `SELECT rb.id, rb.finished_at, rb.difficulty_multiplier,
+              b.title, b.author, b.cover_url, b.page_count
+       FROM reader_books rb JOIN books b ON b.id = rb.book_id
+       WHERE rb.reader_id = ? AND rb.status = 'finished'
+       ORDER BY rb.finished_at DESC`
+    )
+    .all(reader.id);
+
+  // Pages read per calendar day (positive deltas only), all-time.
+  const activity = db
+    .prepare(
+      `SELECT date(p.at) AS date, SUM(MAX(p.to_page - p.from_page, 0)) AS pages
+       FROM progress_log p JOIN reader_books rb ON rb.id = p.reader_book_id
+       WHERE rb.reader_id = ?
+       GROUP BY date(p.at)
+       HAVING pages > 0
+       ORDER BY date(p.at)`
+    )
+    .all(reader.id);
+
+  const totals = db
+    .prepare(
+      `SELECT COALESCE(SUM(MAX(p.to_page - p.from_page, 0)), 0)                              AS pages,
+              COALESCE(SUM(MAX(p.to_page - p.from_page, 0) * rb.difficulty_multiplier), 0)   AS score
+       FROM progress_log p JOIN reader_books rb ON rb.id = p.reader_book_id
+       WHERE rb.reader_id = ?`
+    )
+    .get(reader.id);
+
+  res.json({
+    reader,
+    totals: {
+      pages: totals.pages,
+      score: Math.round(totals.score * 10) / 10,
+      booksFinished: finished.length,
+      reading: reading.length,
+    },
+    reading,
+    finished,
+    activity,
+  });
+});
+
 // --- My books ---------------------------------------------------------------
 app.get("/api/books", (req, res) => {
   const rows = db
@@ -252,8 +314,14 @@ app.post("/api/books", (req, res) => {
     return res.status(409).json({ error: "excluded", reason: exclude });
 
   const { multiplier } = matchMultiplier(m.categories || []);
-  const difficulty =
+  let difficulty =
     typeof m.difficultyMultiplier === "number" ? m.difficultyMultiplier : multiplier;
+  // Reading in a non-native language is its own (editable) category — overrides
+  // the genre-based suggestion.
+  if (m.language) {
+    const row = db.prepare("SELECT multiplier FROM genre_multipliers WHERE genre_key='language'").get();
+    difficulty = row ? row.multiplier : 2.0;
+  }
 
   // Reuse an existing cached book by ISBN or title+author.
   let book = m.isbn13
