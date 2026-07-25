@@ -1,22 +1,21 @@
-# Production stack: the Node app + a Cloudflare Tunnel. Nothing is published to
-# the host — cloudflared reaches the app over the internal Docker network and
-# Cloudflare terminates TLS at the edge. Auth is the in-app PIN, so no
-# Cloudflare Access policy is required (add one if you want a second gate).
+# Deployed by Komodo (Build → Stack) on main-public.
+# No per-app tunnel: the shared cloudflared stack reaches this by name over the
+# external `web` network; a Cloudflare Public Hostname row maps
+# books.lmartins18.com -> http://book-challenge-app:3000.
+# Image is built locally by Komodo Build; never pulled from a registry.
 #
-# Local development: layer the dev override, which publishes port 3000 and
-# skips the tunnel:
+# Secrets (SESSION_SECRET, GOOGLE_BOOKS_API_KEY) come from the Komodo Stack's
+# Environment, which Komodo writes to a .env next to this file at deploy time.
+#
+# Local development (publishes 3000, no tunnel):
 #   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
-#
-# Production (CI does this): images are prebuilt via buildx, then
-#   docker compose --profile prod up -d --no-build
 services:
   app:
-    build: ./app
     image: book-challenge-app:latest
+    pull_policy: never
+    build: ./app
     container_name: book-challenge-app
     restart: unless-stopped
-    security_opt:
-      - apparmor:unconfined
     environment:
       NODE_ENV: "production"
       PORT: "3000"
@@ -25,30 +24,10 @@ services:
       # Optional — raises Google Books quota. Works without it.
       GOOGLE_BOOKS_API_KEY: "${GOOGLE_BOOKS_API_KEY:-}"
     volumes:
-      - app-data:/data
+      - /srv/data/book-challenge:/data
     networks:
-      - internal
-
-  # Public ingress. Only runs under the `prod` profile so a local `docker
-  # compose up` doesn't try to start a tunnel. Point the tunnel's public
-  # hostname (books.lmartins18.com) at http://app:3000 in the Cloudflare dash.
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    container_name: book-challenge-cloudflared
-    restart: unless-stopped
-    profiles: ["prod"]
-    security_opt:
-      - apparmor:unconfined
-    command: tunnel --no-autoupdate run
-    environment:
-      - TUNNEL_TOKEN=${CF_TUNNEL_TOKEN:-}
-    depends_on:
-      - app
-    networks:
-      - internal
+      - web
 
 networks:
-  internal:
-
-volumes:
-  app-data:
+  web:
+    external: true
