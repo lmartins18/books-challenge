@@ -414,9 +414,33 @@ async function renderShelf() {
       </div>`);
     card.querySelector(".cover").onclick = () => bookActions(b);
     card.querySelector(".meta").onclick = () => bookActions(b);
+    const tag = card.querySelector(".tag");
+    tag.title = "Tap to change the multiplier";
+    tag.onclick = (e) => { e.stopPropagation(); editMultiplier(b); };
     shelf.appendChild(card);
   }
   v.appendChild(shelf);
+}
+
+// Fix a wrong auto-suggested difficulty (missing/bad metadata categories).
+// Applies retroactively: score is computed from the current multiplier.
+async function editMultiplier(b) {
+  const val = await promptDialog({
+    title: `Difficulty for “${b.title}”`,
+    message: `Score = ${isBible(b) ? "chapters" : "pages"} × multiplier. Currently ×${b.difficulty_multiplier}.`,
+    okText: "Save",
+    input: { type: "number", inputmode: "decimal", value: b.difficulty_multiplier, placeholder: "e.g. 5" },
+  });
+  if (val === null) return;
+  const m = parseFloat(val);
+  if (!(m > 0)) return toast("Enter a number above 0");
+  try {
+    await api(`/books/${b.id}`, { method: "PUT", body: { difficultyMultiplier: m } });
+    toast(`×${m} saved`);
+    renderShelf();
+  } catch {
+    toast("Could not update multiplier");
+  }
 }
 
 async function bookActions(b) {

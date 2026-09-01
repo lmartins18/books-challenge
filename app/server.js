@@ -161,7 +161,7 @@ app.post("/api/change-pin", (req, res) => {
 // --- Metadata search / lookup ----------------------------------------------
 // Attach our domain verdicts (suggested multiplier + exclusion) to each result.
 function annotate(meta) {
-  const { multiplier, genre_key } = matchMultiplier(meta.categories);
+  const { multiplier, genre_key } = matchMultiplier(meta.categories, meta.title);
   const exclude = exclusionReason(meta.categories);
   return { ...meta, suggestedMultiplier: multiplier, genreKey: genre_key, excludeReason: exclude };
 }
@@ -350,7 +350,7 @@ app.post("/api/books", (req, res) => {
   if (exclude && !m.force)
     return res.status(409).json({ error: "excluded", reason: exclude });
 
-  const { multiplier } = matchMultiplier(m.categories || []);
+  const { multiplier } = matchMultiplier(m.categories || [], m.title);
   let difficulty =
     typeof m.difficultyMultiplier === "number" ? m.difficultyMultiplier : multiplier;
   // Reading in a non-native language is its own (editable) category — overrides

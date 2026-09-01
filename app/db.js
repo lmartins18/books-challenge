@@ -133,15 +133,22 @@ const EXCLUDE_KEYWORDS = [
 ];
 
 // Given an array of category/subject strings, return { multiplier, genre_key }.
-export function matchMultiplier(categories = []) {
-  const hay = categories.join(" | ").toLowerCase();
-  for (const [key, words] of GENRE_KEYWORDS) {
-    if (words.some((w) => hay.includes(w))) {
-      const row = db
-        .prepare("SELECT multiplier FROM genre_multipliers WHERE genre_key=?")
-        .get(key);
-      return { multiplier: row ? row.multiplier : 1.0, genre_key: key };
-    }
+// Categories are authoritative, but metadata sources sometimes return none
+// (common for small-press tech books) — fall back to keywords in the title.
+export function matchMultiplier(categories = [], title = "") {
+  const findKey = (hay) => {
+    for (const [key, words] of GENRE_KEYWORDS)
+      if (words.some((w) => hay.includes(w))) return key;
+    return null;
+  };
+  const key =
+    findKey(categories.join(" | ").toLowerCase()) ??
+    findKey(String(title).toLowerCase());
+  if (key) {
+    const row = db
+      .prepare("SELECT multiplier FROM genre_multipliers WHERE genre_key=?")
+      .get(key);
+    return { multiplier: row ? row.multiplier : 1.0, genre_key: key };
   }
   return { multiplier: 1.0, genre_key: "fiction" };
 }
