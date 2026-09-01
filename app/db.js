@@ -186,15 +186,6 @@ once("armageddon-2026-09", () => {
   ).run();
 });
 
-// Clean slate for Armageddon: drop all reading data — shelves, finished
-// history, and every logged page (which is what profile scores/heatmaps are
-// computed from). Readers, PINs, seasons, and multipliers stay.
-once("armageddon-2026-09-wipe-books", () => {
-  db.prepare("DELETE FROM progress_log").run();
-  db.prepare("DELETE FROM reader_books").run();
-  db.prepare("DELETE FROM books").run();
-});
-
 // --- Seed: an active season for the current calendar year -------------------
 export function ensureActiveSeason() {
   const active = db.prepare("SELECT * FROM seasons WHERE is_active=1").get();
