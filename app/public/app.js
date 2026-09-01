@@ -87,6 +87,53 @@ const promptDialog = (opts) => dialog({ input: { type: "text", ...opts.input }, 
 
 const state = { me: null, view: "leaderboard" };
 
+// --- Countdown ticker ---------------------------------------------------------
+// One shared interval; whichever screen owns a countdown clears the previous.
+let ticker = null;
+const stopTicker = () => { clearInterval(ticker); ticker = null; };
+
+// "3d 07:42:05" — days only when there are any.
+function fmtCountdown(ms) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const d = Math.floor(s / 86400);
+  const pad = (n) => String(n).padStart(2, "0");
+  const hms = `${pad(Math.floor((s % 86400) / 3600))}:${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}`;
+  return d > 0 ? `${d}d ${hms}` : hms;
+}
+
+// --- Launch gate --------------------------------------------------------------
+// Shown while the server is locked; counts down to opensAt and flips into the
+// app on its own at zero hour.
+function showGate(opensAt) {
+  $("#app").classList.add("hidden");
+  $("#login").classList.add("hidden");
+  $("#gate").classList.remove("hidden");
+  const target = new Date(opensAt).getTime();
+  const out = $("#gate-count");
+  stopTicker();
+  const tick = async () => {
+    const left = target - Date.now();
+    out.textContent = fmtCountdown(left);
+    if (left <= 0) {
+      stopTicker();
+      out.textContent = "00:00:00";
+      // Confirm with the server (clocks drift), then open the doors.
+      try {
+        const { locked, opensAt: nextOpen } = await api("/status");
+        if (!locked) {
+          $("#gate").classList.add("hidden");
+          return boot();
+        }
+        showGate(nextOpen);
+      } catch {
+        setTimeout(tick, 5000);
+      }
+    }
+  };
+  tick();
+  ticker = setInterval(tick, 1000);
+}
+
 // --- Login ------------------------------------------------------------------
 async function showLogin() {
   $("#app").classList.add("hidden");
@@ -149,6 +196,7 @@ document.querySelectorAll(".tab").forEach((tab) => {
   tab.onclick = () => navigate(tab.dataset.view);
 });
 function navigate(view) {
+  stopTicker();
   state.view = view;
   document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.dataset.view === view));
   ({
@@ -161,10 +209,6 @@ function navigate(view) {
 }
 
 // --- Leaderboard ------------------------------------------------------------
-function daysLeft(ends_on) {
-  const end = new Date(ends_on + "T23:59:59");
-  return Math.max(0, Math.ceil((end - new Date()) / 86400000));
-}
 async function renderLeaderboard() {
   const v = $("#view");
   v.innerHTML = `<p class="muted">Loading…</p>`;
@@ -174,9 +218,21 @@ async function renderLeaderboard() {
   const head = el(`
     <div class="card">
       <div class="season-head"><h2>${esc(season.name)}</h2>
-        <span class="days">${daysLeft(season.ends_on)} days left</span></div>
+        <span class="days"></span></div>
     </div>`);
   v.appendChild(head);
+
+  // Doomsday clock: live countdown to the end of the season.
+  const clock = head.querySelector(".days");
+  const endsAt = new Date(season.ends_on + "T23:59:59").getTime();
+  const tickClock = () => {
+    const left = endsAt - Date.now();
+    clock.textContent = left <= 0 ? "the end" : `☄ ${fmtCountdown(left)}`;
+    if (left <= 0) stopTicker();
+  };
+  tickClock();
+  stopTicker();
+  ticker = setInterval(tickClock, 1000);
 
   const board = el(`<div class="card"></div>`);
   standings.forEach((s, i) => {
@@ -613,15 +669,23 @@ async function createSeason(kind) {
 }
 
 // --- Boot -------------------------------------------------------------------
-(async function boot() {
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("/sw.js").catch(() => {});
-  }
+async function boot() {
+  // Locked until zero hour? Show the gate — it re-runs boot() when time's up.
+  try {
+    const { locked, opensAt } = await api("/status");
+    if (locked) return showGate(opensAt);
+  } catch { /* status unavailable — fall through and try a normal boot */ }
   try {
     const { reader } = await api("/me");
     if (reader) { state.me = reader; enterApp(); }
     else showLogin();
-  } catch {
+  } catch (e) {
+    if (e.status === 423 && e.data?.opensAt) return showGate(e.data.opensAt);
     showLogin();
   }
-})();
+}
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/sw.js").catch(() => {});
+}
+boot();

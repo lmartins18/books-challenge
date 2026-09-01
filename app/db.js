@@ -101,8 +101,9 @@ for (const name of ["Luis", "Eliana"]) seedReader.run(name);
 // Ordered hardest -> easiest. matchMultiplier() picks the hardest match so a
 // "Philosophy / Fiction" book still reads as philosophy.
 const GENRE_SEED = [
+  ["religion", "Religious texts", 10.0],
   ["language", "Different language (non-native)", 2.0],
-  ["philosophy", "Philosophy / Religion", 1.5],
+  ["philosophy", "Philosophy", 1.5],
   ["science", "Science / Math / Tech", 1.4],
   ["history", "History / Politics", 1.3],
   ["literary", "Literary / Poetry / Classics", 1.2],
@@ -116,7 +117,8 @@ for (const [k, l, m] of GENRE_SEED) seedGenre.run(k, l, m);
 
 // Keyword -> genre_key. First (hardest) match wins.
 const GENRE_KEYWORDS = [
-  ["philosophy", ["philosoph", "religion", "theolog", "ethic", "metaphysic"]],
+  ["religion", ["religion", "theolog", "bible", "biblical", "christian", "islam", "quran", "koran", "judais", "torah", "buddhis", "hindu", "scripture", "spiritual"]],
+  ["philosophy", ["philosoph", "ethic", "metaphysic"]],
   ["science", ["science", "mathemat", "physics", "biology", "technolog", "medical", "computer", "engineering"]],
   ["history", ["history", "histor", "politic", "war", "biography", "economics"]],
   ["literary", ["literary", "poetry", "drama", "classic", "essays"]],
@@ -151,6 +153,38 @@ export function exclusionReason(categories = []) {
   const hit = EXCLUDE_KEYWORDS.find((w) => hay.includes(w));
   return hit ? `Looks like a kids' book or comic ("${hit.trim()}")` : null;
 }
+
+// --- One-time migrations (keyed, run once per database) ----------------------
+db.exec(`
+  CREATE TABLE IF NOT EXISTS app_meta (
+    key   TEXT PRIMARY KEY,
+    value TEXT
+  );
+`);
+
+function once(key, fn) {
+  const done = db.prepare("SELECT value FROM app_meta WHERE key=?").get(key);
+  if (done) return;
+  tx(() => {
+    fn();
+    db.prepare("INSERT INTO app_meta (key, value) VALUES (?, datetime('now'))").run(key);
+  });
+}
+
+// Armageddon reset: keep readers (and their shelves/history) but clear every
+// PIN — the first login after launch sets a fresh one. Retire all previous
+// seasons and start a one-month doomsday season.
+once("armageddon-2026-09", () => {
+  db.prepare("UPDATE readers SET pin_hash=NULL").run();
+  db.prepare("UPDATE seasons SET is_active=0").run();
+  // Religion split out of philosophy into its own 10x category (the seed above
+  // only inserts the new row; existing DBs still carry the old combined label).
+  db.prepare("UPDATE genre_multipliers SET label='Philosophy' WHERE genre_key='philosophy'").run();
+  db.prepare(
+    `INSERT INTO seasons (name, kind, starts_on, ends_on, is_active)
+     VALUES ('Armageddon', 'custom', '2026-09-01', '2026-09-30', 1)`
+  ).run();
+});
 
 // --- Seed: an active season for the current calendar year -------------------
 export function ensureActiveSeason() {

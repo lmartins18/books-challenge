@@ -33,7 +33,9 @@ app.use(cookieParser(SESSION_SECRET));
 const today = () => new Date().toISOString().slice(0, 10);
 
 // --- Auth helpers -----------------------------------------------------------
-const COOKIE = "reader";
+// "reader2": renamed for the Armageddon reset so pre-reset identity cookies
+// (valid for a year) stop working and everyone re-authenticates with a new PIN.
+const COOKIE = "reader2";
 const cookieOpts = {
   httpOnly: true,
   sameSite: "lax",
@@ -48,10 +50,41 @@ function currentReaderId(req) {
   return Number.isInteger(id) ? id : null;
 }
 
+// --- Launch lockdown ----------------------------------------------------------
+// Until the active season's start date, the whole API (health/status excepted)
+// is sealed — no login, no browsing, nothing. The site opens by itself at zero
+// hour: clients poll /api/status and flip when `locked` goes false.
+// The season starts at local midnight for the readers (US Eastern), not UTC —
+// the server container runs on UTC, where "tomorrow" arrives 4-5 hours early.
+const CHALLENGE_UTC_OFFSET = process.env.CHALLENGE_UTC_OFFSET || "-04:00";
+
+function lockInfo() {
+  const season = ensureActiveSeason();
+  const opensAt = new Date(season.starts_on + "T00:00:00" + CHALLENGE_UTC_OFFSET);
+  return { locked: Date.now() < opensAt.getTime(), opensAt: opensAt.toISOString(), season };
+}
+
+app.use("/api", (req, res, next) => {
+  if (req.path === "/health" || req.path === "/status") return next();
+  const { locked, opensAt } = lockInfo();
+  if (locked) return res.status(423).json({ error: "locked", opensAt });
+  next();
+});
+
+app.get("/api/status", (_req, res) => {
+  const { locked, opensAt, season } = lockInfo();
+  res.json({
+    locked,
+    opensAt,
+    now: new Date().toISOString(),
+    season: { name: season.name, starts_on: season.starts_on, ends_on: season.ends_on },
+  });
+});
+
 // Guard: everything under /api except the auth/bootstrap routes requires a
 // valid signed cookie. Mounted at "/api", so req.path here is prefix-stripped
 // (e.g. "/health", not "/api/health").
-const OPEN = new Set(["/health", "/readers", "/login", "/me"]);
+const OPEN = new Set(["/health", "/status", "/readers", "/login", "/me"]);
 app.use("/api", (req, res, next) => {
   if (OPEN.has(req.path)) return next();
   const id = currentReaderId(req);
