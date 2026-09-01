@@ -227,19 +227,23 @@ app.get("/api/leaderboard", (req, res) => {
     (req.query.seasonId &&
       db.prepare("SELECT * FROM seasons WHERE id=?").get(req.query.seasonId)) ||
     ensureActiveSeason();
+  // books_finished is season-scoped (finished during this season's window);
+  // the all-time count lives on the reader profile instead.
   const rows = db
     .prepare(
       `SELECT r.id, r.name,
               COALESCE(SUM((p.to_page - p.from_page) * rb.difficulty_multiplier), 0) AS score,
               COALESCE(SUM(p.to_page - p.from_page), 0)                              AS raw_pages,
-              COUNT(DISTINCT CASE WHEN rb.status='finished' THEN rb.id END)          AS books_finished
+              COUNT(DISTINCT CASE WHEN rb.status='finished'
+                                   AND date(rb.finished_at) BETWEEN ? AND ?
+                                  THEN rb.id END)                                    AS books_finished
        FROM readers r
        LEFT JOIN reader_books rb ON rb.reader_id = r.id
        LEFT JOIN progress_log  p ON p.reader_book_id = rb.id AND p.season_id = ?
        GROUP BY r.id
        ORDER BY score DESC, raw_pages DESC`
     )
-    .all(season.id);
+    .all(season.starts_on, season.ends_on, season.id);
   const standings = rows.map((r) => ({
     ...r,
     score: Math.round(r.score * 10) / 10,
