@@ -87,6 +87,10 @@ const promptDialog = (opts) => dialog({ input: { type: "text", ...opts.input }, 
 
 const state = { me: null, view: "leaderboard" };
 
+// Bible books are tracked in chapters, not pages (edition-independent).
+const isBible = (b) => b.unit === "chapters" || b.author === "The Bible";
+const unitOf = (b) => (isBible(b) ? "ch" : "p");
+
 // --- Countdown ticker ---------------------------------------------------------
 // One shared interval; whichever screen owns a countdown clears the previous.
 let ticker = null;
@@ -357,7 +361,7 @@ async function renderProfile(readerId) {
     reading.forEach((b) =>
       card.appendChild(profileBookRow(
         { ...b, status: "reading" },
-        `${b.current_page}${b.page_count ? "/" + b.page_count : ""} p · ×${b.difficulty_multiplier}`
+        `${b.current_page}${b.page_count ? "/" + b.page_count : ""} ${unitOf(b)} · ×${b.difficulty_multiplier}`
       )));
     v.appendChild(card);
   }
@@ -374,7 +378,7 @@ async function renderProfile(readerId) {
       byYear[y].forEach((b) =>
         card.appendChild(profileBookRow(
           { ...b, status: "finished" },
-          `finished ${niceDate(b.finished_at)}${b.page_count ? " · " + b.page_count + " p" : ""}`
+          `finished ${niceDate(b.finished_at)}${b.page_count ? " · " + b.page_count + " " + unitOf(b) : ""}`
         )));
     }
     v.appendChild(card);
@@ -404,7 +408,7 @@ async function renderShelf() {
         <div class="meta">
           <div class="t">${esc(b.title)}</div>
           <div class="a">${esc(b.author || "")}</div>
-          <div class="tag">×${b.difficulty_multiplier} · ${b.current_page}${b.page_count ? "/" + b.page_count : ""} p</div>
+          <div class="tag">×${b.difficulty_multiplier} · ${b.current_page}${b.page_count ? "/" + b.page_count : ""} ${unitOf(b)}</div>
           <div class="bar"><i style="width:${pct}%"></i></div>
         </div>
       </div>`);
@@ -416,19 +420,20 @@ async function renderShelf() {
 }
 
 async function bookActions(b) {
+  const unit = isBible(b) ? "chapter" : "page";
   const page = await promptDialog({
     title: b.title,
-    message: `What page are you on now?${b.page_count ? " (of " + b.page_count + ")" : ""}`,
+    message: `What ${unit} are you on now?${b.page_count ? " (of " + b.page_count + ")" : ""}`,
     okText: "Save progress",
-    input: { type: "number", inputmode: "numeric", value: b.current_page, placeholder: "Page number" },
+    input: { type: "number", inputmode: "numeric", value: b.current_page, placeholder: `${unit[0].toUpperCase()}${unit.slice(1)} number` },
   });
   if (page === null) return;
   const toPage = parseInt(page, 10);
   if (!Number.isInteger(toPage)) return toast("Enter a page number");
   try {
     const r = await api(`/books/${b.id}/progress`, { method: "POST", body: { toPage } });
-    if (r.pagesLogged > 0) toast(`+${r.pagesLogged} pages logged`);
-    else if (r.pagesLogged < 0) toast(`Corrected to page ${toPage}`);
+    if (r.pagesLogged > 0) toast(`+${r.pagesLogged} ${unit}s logged`);
+    else if (r.pagesLogged < 0) toast(`Corrected to ${unit} ${toPage}`);
     renderShelf();
   } catch {
     toast("Could not log progress");
@@ -486,7 +491,7 @@ function addResultCard(box, r) {
         <div class="t">${esc(r.title)}</div>
         <div class="a">${esc(r.author || "Unknown author")}</div>
         <div class="badges">
-          <span class="badge">${r.pageCount ? r.pageCount + " p" : "pages ?"}</span>
+          <span class="badge">${r.pageCount ? r.pageCount + " " + unitOf(r) : "pages ?"}</span>
           <span class="badge mult">×${r.suggestedMultiplier}</span>
           ${excluded ? `<span class="badge warn">flagged</span>` : ""}
         </div>

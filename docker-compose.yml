@@ -1,7 +1,7 @@
 # Deployed by Komodo (Build → Stack) on main-public.
 # No per-app tunnel: the shared cloudflared stack reaches this by name over the
 # external `web` network; a Cloudflare Public Hostname row maps
-# books.lmartins18.com -> http://book-challenge-app:3000.
+# reading.lmartins18.com -> http://book-challenge-app:3000.
 # Image is built locally by Komodo Build; never pulled from a registry.
 #
 # Secrets (SESSION_SECRET, GOOGLE_BOOKS_API_KEY) come from the Komodo Stack's

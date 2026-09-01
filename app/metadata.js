@@ -9,6 +9,8 @@
 // and sidesteps browser CORS. Results are normalized to a single shape:
 //   { source, title, author, isbn13, coverUrl, pageCount, categories: [] }
 // ---------------------------------------------------------------------------
+import { bibleSearch } from "./bible.js";
+
 const GOOGLE_KEY = process.env.GOOGLE_BOOKS_API_KEY || "";
 const UA = { headers: { "User-Agent": "book-challenge/1.0 (self-hosted)" } };
 
@@ -126,9 +128,10 @@ function merge(primary, extra) {
 }
 
 // --- Public API -------------------------------------------------------------
-// Search: Google first (rich categories/pages), Open Library as backup. Then
-// backfill missing covers/pages from Open Library by ISBN.
+// Search: built-in Bible books first (offline, exact), then Google (rich
+// categories/pages) with Open Library as backup.
 export async function search(q) {
+  const bible = bibleSearch(q);
   let results = [];
   try {
     results = await googleSearch(q);
@@ -142,7 +145,7 @@ export async function search(q) {
       /* leave empty */
     }
   }
-  return results.filter((r) => r.title);
+  return [...bible, ...results.filter((r) => r.title)];
 }
 
 // Single-book ISBN lookup (barcode scan). Try Google Books first (one call,
