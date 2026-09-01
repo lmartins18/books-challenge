@@ -186,6 +186,21 @@ once("armageddon-2026-09", () => {
   ).run();
 });
 
+// The 2026 year challenge originally ran through Dec 31, so its range overlaps
+// Armageddon and September progress was credited to it (leaderboard showed 0).
+// Finish the old challenge at Aug 31 and move progress logged since launch to
+// the active season.
+once("armageddon-2026-09-finish-old", () => {
+  const active = db.prepare("SELECT id FROM seasons WHERE is_active=1").get();
+  if (!active) return;
+  db.prepare(
+    "UPDATE seasons SET ends_on='2026-08-31' WHERE id != ? AND starts_on < '2026-09-01' AND ends_on >= '2026-09-01'"
+  ).run(active.id);
+  db.prepare(
+    "UPDATE progress_log SET season_id=? WHERE date(at) >= '2026-09-01'"
+  ).run(active.id);
+});
+
 // --- Seed: an active season for the current calendar year -------------------
 export function ensureActiveSeason() {
   const active = db.prepare("SELECT * FROM seasons WHERE is_active=1").get();
@@ -202,11 +217,13 @@ export function ensureActiveSeason() {
 ensureActiveSeason();
 
 // Resolve which season a given date (YYYY-MM-DD) falls in: prefer a season
-// whose range contains the date, else the active season.
+// whose range contains the date, else the active season. Ranges can overlap
+// (a retired year season spans the same months as a short active one), so the
+// active season wins, then monthly over yearly.
 export function seasonForDate(ymd) {
   const inRange = db
     .prepare(
-      "SELECT * FROM seasons WHERE ? BETWEEN starts_on AND ends_on ORDER BY (kind='month') DESC LIMIT 1"
+      "SELECT * FROM seasons WHERE ? BETWEEN starts_on AND ends_on ORDER BY is_active DESC, (kind='month') DESC LIMIT 1"
     )
     .get(ymd);
   if (inRange) return inRange;
